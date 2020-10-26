@@ -21,6 +21,11 @@
 
 /* Implementation by Sean Parkinson. */
 
+/*
+DESCRIPTION
+This library provides single precision (SP) integer math functions.
+
+*/
 #ifdef HAVE_CONFIG_H
     #include <config.h>
 #endif
@@ -38,9 +43,9 @@
  * WOLFSSL_HAVE_SP_RSA:         Enable SP RSA support
  * WOLFSSL_HAVE_SP_DH:          Enable SP DH support
  * WOLFSSL_HAVE_SP_ECC:         Enable SP ECC support
- * WOLFSSL_SP_MATH:             Use only single precision math and algorithms 
+ * WOLFSSL_SP_MATH:             Use only single precision math and algorithms
  *      it supports (no fastmath tfm.c or normal integer.c)
- * WOLFSSL_SP_SMALL:            Use smaller version of code and avoid large 
+ * WOLFSSL_SP_SMALL:            Use smaller version of code and avoid large
  *      stack variables
  * WOLFSSL_SP_NO_MALLOC:        Always use stack, no heap XMALLOC/XFREE allowed
  * WOLFSSL_SP_NO_2048:          Disable RSA/DH 2048-bit support
@@ -48,17 +53,16 @@
  * WOLFSSL_SP_4096:             Enable RSA/RH 4096-bit support
  * WOLFSSL_SP_384               Enable ECC 384-bit SECP384R1 support
  * WOLFSSL_SP_NO_256            Disable ECC 256-bit SECP256R1 support
- * WOLFSSL_SP_CACHE_RESISTANT   Enable cache resistantant code
  * WOLFSSL_SP_ASM               Enable assembly speedups (detect platform)
  * WOLFSSL_SP_X86_64_ASM        Enable Intel x86 assembly speedups like AVX/AVX2
  * WOLFSSL_SP_ARM32_ASM         Enable Aarch32 assembly speedups
  * WOLFSSL_SP_ARM64_ASM         Enable Aarch64 assembly speedups
  * WOLFSSL_SP_ARM_CORTEX_M_ASM  Enable Cortex-M assembly speedups
- * WOLFSSL_SP_ARM_THUMB_ASM     Enable ARM Thumb assembly speedups 
+ * WOLFSSL_SP_ARM_THUMB_ASM     Enable ARM Thumb assembly speedups
  *      (used with -mthumb)
  * SP_WORD_SIZE                 Force 32 or 64 bit mode
- * WOLFSSL_SP_NONBLOCK          Enables "non blocking" mode for SP math, which 
- *      will return FP_WOULDBLOCK for long operations and function must be 
+ * WOLFSSL_SP_NONBLOCK          Enables "non blocking" mode for SP math, which
+ *      will return FP_WOULDBLOCK for long operations and function must be
  *      called again until complete.
  */
 
@@ -100,7 +104,9 @@ int sp_init(sp_int* a)
 {
     a->used = 0;
     a->size = SP_INT_DIGITS;
-
+#ifdef HAVE_WOLF_BIGINT
+    wc_bigint_init(&a->raw);
+#endif
     return MP_OKAY;
 }
 
@@ -121,33 +127,64 @@ int sp_init_multi(sp_int* a, sp_int* b, sp_int* c, sp_int* d, sp_int* e,
     if (a != NULL) {
         a->used = 0;
         a->size = SP_INT_DIGITS;
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_init(&a->raw);
+    #endif
     }
     if (b != NULL) {
         b->used = 0;
         b->size = SP_INT_DIGITS;
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_init(&b->raw);
+    #endif
     }
     if (c != NULL) {
         c->used = 0;
         c->size = SP_INT_DIGITS;
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_init(&c->raw);
+    #endif
     }
     if (d != NULL) {
         d->used = 0;
         d->size = SP_INT_DIGITS;
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_init(&d->raw);
+    #endif
     }
     if (e != NULL) {
         e->used = 0;
         e->size = SP_INT_DIGITS;
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_init(&e->raw);
+    #endif
     }
     if (f != NULL) {
         f->used = 0;
         f->size = SP_INT_DIGITS;
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_init(&f->raw);
+    #endif
     }
 
     return MP_OKAY;
 }
 #endif
 
-/* Clear the data from the big number and set to zero.
+/* Free the memory from the big number.
+ *
+ * a  SP integer.
+ */
+void sp_free(sp_int* a)
+{
+    if (a != NULL) {
+    #ifdef HAVE_WOLF_BIGINT
+        wc_bigint_free(&a->raw);
+    #endif
+    }
+}
+
+/* Clear and Free the data from the big number and set to zero.
  *
  * a  SP integer.
  */
@@ -159,6 +196,8 @@ void sp_clear(sp_int* a)
         for (i=0; i<a->used; i++)
             a->dp[i] = 0;
         a->used = 0;
+
+        sp_free(a);
     }
 }
 
@@ -178,10 +217,10 @@ int sp_unsigned_bin_size(sp_int* a)
  * a     SP integer.
  * in    Array of bytes.
  * inSz  Number of data bytes in array.
- * returns BAD_FUNC_ARG when the number is too big to fit in an SP and
+ * returns MP_VAL when the number is too big to fit in an SP and
            MP_OKAY otherwise.
  */
-int sp_read_unsigned_bin(sp_int* a, const byte* in, int inSz)
+int sp_read_unsigned_bin(sp_int* a, const byte* in, word32 inSz)
 {
     int err = MP_OKAY;
     int i, j = 0, k;
@@ -190,8 +229,11 @@ int sp_read_unsigned_bin(sp_int* a, const byte* in, int inSz)
     if (inSz > (SP_INT_DIGITS - 1) * (int)sizeof(a->dp[0])) {
         err = MP_VAL;
     }
-
-    if (err == MP_OKAY) {
+    else if (inSz == 0) {
+        XMEMSET(a->dp, 0, a->size * sizeof(*a->dp));
+        a->used = 0;
+    }
+    else {
         for (i = inSz-1; i >= (SP_WORD_SIZE/8); i -= (SP_WORD_SIZE/8), j++) {
             a->dp[j]  = (((sp_int_digit)in[i-0]) << (0*8))
                      |  (((sp_int_digit)in[i-1]) << (1*8))
@@ -212,9 +254,9 @@ int sp_read_unsigned_bin(sp_int* a, const byte* in, int inSz)
             }
         }
         a->used = j + 1;
-    }
 
-    sp_clamp(a);
+        sp_clamp(a);
+    }
 
     return err;
 }
@@ -420,12 +462,15 @@ int sp_to_unsigned_bin_len(sp_int* a, byte* out, int outSz)
     int i, j, b;
 
     j = outSz - 1;
-    for (i=0; j>=0; i++) {
+    for (i = 0; j >= 0 && i < a->used; i++) {
         for (b = 0; b < SP_WORD_SIZE; b += 8) {
             out[j--] = a->dp[i] >> b;
             if (j < 0)
                 break;
         }
+    }
+    for (; j >= 0; j--) {
+        out[j] = 0;
     }
 
     return MP_OKAY;
@@ -688,6 +733,8 @@ void sp_rshb(sp_int* a, int n, sp_int* r)
     }
 }
 
+#if defined(WOLFSSL_SP_SMALL) || (defined(WOLFSSL_KEY_GEN) || \
+                                         !defined(NO_DH) && !defined(WC_NO_RNG))
 /* Multiply a by digit n and put result into r shifting up o digits.
  *   r = (a * n) << (o * SP_WORD_SIZE)
  *
@@ -714,6 +761,7 @@ static void _sp_mul_d(sp_int* a, sp_int_digit n, sp_int* r, int o)
     r->used = i+o+1;
     sp_clamp(r);
 }
+#endif
 
 /* Divide a two digit number by a digit number and return. (hi | lo) / d
  *
@@ -902,7 +950,7 @@ static int sp_div(sp_int* a, sp_int* d, sp_int* r, sp_int* rem)
         }
         for (i = sa->used - 1; i >= d->used; i--) {
             if (sa->dp[i] == dt) {
-                t = (sp_digit)-1;
+                t = SP_MASK; /* f's */
             }
             else {
                 t = sp_div_word(sa->dp[i], sa->dp[i-1], dt);
@@ -1019,12 +1067,27 @@ int sp_add_d(sp_int* a, sp_int_digit d, sp_int* r)
     int i = 0;
     sp_int_digit t;
 
+    if (a == NULL || r == NULL || a->used > SP_INT_DIGITS)
+        return BAD_FUNC_ARG;
+
     r->used = a->used;
-    if (a->used == 0) {
-        r->used = d > 0;
+
+    if (d == 0) {
+        /*copy the content of <a> to <r>*/
+        for (; i < a->used; i++)
+            r->dp[i] = a->dp[i];
+
+        return MP_OKAY;
     }
-    t = a->dp[0] + d;
-    if (t < a->dp[0]) {
+
+    if (a->used == 0) {
+        r->used = 1;
+        t = d;
+    }
+    else
+        t = a->dp[0] + d;
+
+    if (a->used != 0 && t < a->dp[0]) {
         for (++i; i < a->used; i++) {
             r->dp[i] = a->dp[i] + 1;
             if (r->dp[i] != 0) {
@@ -1033,18 +1096,21 @@ int sp_add_d(sp_int* a, sp_int_digit d, sp_int* r)
         }
         if (i == a->used) {
             r->used++;
-            r->dp[i] = 1;
+            if (i < SP_INT_DIGITS)
+                r->dp[i] = 1;
+            else
+                return MP_VAL;
         }
     }
     r->dp[0] = t;
     if (r != a) {
-        for (++i; i < a->used; i++) {
+        for (++i; i < a->used; i++)
             r->dp[i] = a->dp[i];
-        }
     }
 
     return MP_OKAY;
 }
+
 
 #if !defined(NO_DH) || defined(HAVE_ECC) || defined(WC_RSA_BLINDING) || \
     !defined(WOLFSSL_RSA_VERIFY_ONLY)
@@ -1401,9 +1467,79 @@ int sp_mulmod(sp_int* a, sp_int* b, sp_int* m, sp_int* r)
 }
 #endif
 
+#ifdef WOLFSSL_SP_MOD_WORD_RP
+/* Calculate the word w modulo the digit d into r: r = w mod d
+ *
+ * w  SP integer word, dividend and result.
+ * d  SP integer digit, modulus.
+ *
+ * returns MP_VAL when d is 0 and MP_OKAY otherwise.
+ */
+static WC_INLINE int sp_mod_word(sp_int_word *w, sp_int_digit d) {
+    sp_int_word x;
+    if (*w == 0)
+        return 0;
+    if (d == 0)
+        return MP_VAL;
+
+    /* Russian Peasant algorithm for division, optimized:
+     *
+     * first, shift x leftward just enough to be greater than w/2.
+     * this can be done by counting the leading zeros of each,
+     * shifting so that x has one less leading zero, and then doing a
+     * final comparison.
+     *
+     */
+#ifdef __GNUC__
+    {
+        int x_shift = ((int)__builtin_clzll(d) + (SP_WORD_SIZE - 1));
+        if ((*w >> SP_WORD_SIZE) == 0)
+            x_shift -=
+#if SP_WORD_SIZE == 64
+                (int)__builtin_clzll((uint64_t)*w)
+#elif SP_WORD_SIZE == 32
+                (int)__builtin_clz((uint32_t)*w)
+#else
+#error unexpected SP_WORD_SIZE
+#endif
+                + SP_WORD_SIZE;
+        else
+            x_shift -=
+#if SP_WORD_SIZE == 64
+                (int)__builtin_clzll((uint64_t)(*w >> SP_WORD_SIZE))
+#elif SP_WORD_SIZE == 32
+                (int)__builtin_clz((uint32_t)(*w >> SP_WORD_SIZE))
+#else
+#error unexpected SP_WORD_SIZE
+#endif
+                ;
+        if (x_shift < 0)
+            x_shift = 0;
+        x = (sp_int_word)d << x_shift;
+    }
+    if (x <= (*w>>1))
+        x <<= 1;
+#else /* ! __GNUC__ */
+    /* textbook logic */
+
+    x = (sp_int_word)d;
+    while (x <= (*w>>1))
+        x <<= 1;
+#endif /* __GNUC__ */
+
+    while (*w >= (sp_int_word)d) {
+        if (*w >= x)
+            *w -= x;
+        x >>= 1;
+    }
+
+    return MP_OKAY;
+}
+#endif /* WOLFSSL_SP_MOD_WORD_RP */
+
 /* Calculate a modulo the digit d into r: r = a mod d
  *
- * a  SP integer to square.
+ * a  SP integer, dividend.
  * d  SP integer digit, modulus.
  * r  SP integer digit, result.
  * returns MP_VAL when d is 0 and MP_OKAY otherwise.
@@ -1413,7 +1549,6 @@ static int sp_mod_d(sp_int* a, const sp_int_digit d, sp_int_digit* r)
     int err = MP_OKAY;
     int i;
     sp_int_word w = 0;
-    sp_int_digit t;
 
     if (d == 0)
         err = MP_VAL;
@@ -1421,8 +1556,17 @@ static int sp_mod_d(sp_int* a, const sp_int_digit d, sp_int_digit* r)
     if (err == MP_OKAY) {
         for (i = a->used - 1; i >= 0; i--) {
             w = (w << SP_WORD_SIZE) | a->dp[i];
-            t = (sp_int_digit)(w / d);
-            w -= (sp_int_word)t * d;
+#ifdef WOLFSSL_SP_MOD_WORD_RP
+            if (sp_mod_word(&w, d) == MP_VAL) {
+                err = MP_VAL;
+                break;
+            }
+#else
+            {
+                sp_int_digit t = (sp_int_digit)(w / d);
+                w -= (sp_int_word)t * d;
+            }
+#endif
         }
 
         *r = (sp_int_digit)w;

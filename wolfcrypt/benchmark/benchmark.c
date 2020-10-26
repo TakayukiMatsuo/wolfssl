@@ -2674,6 +2674,12 @@ static void bench_aesgcm_internal(int doAsync, const byte* key, word32 keySz,
 
     DECLARE_VAR(bench_additional, byte, AES_AUTH_ADD_SZ, HEAP_HINT);
     DECLARE_VAR(bench_tag, byte, AES_AUTH_TAG_SZ, HEAP_HINT);
+#ifdef DECLARE_VAR_IS_HEAP_ALLOC
+    if ((bench_additional == NULL) || (bench_tag == NULL)) {
+        printf("malloc failed\n");
+        goto exit;
+    }
+#endif
 
     /* clear for done cleanup */
     XMEMSET(enc, 0, sizeof(enc));
@@ -3113,13 +3119,19 @@ void bench_aesccm(void)
 
     DECLARE_VAR(bench_additional, byte, AES_AUTH_ADD_SZ, HEAP_HINT);
     DECLARE_VAR(bench_tag, byte, AES_AUTH_TAG_SZ, HEAP_HINT);
+#ifdef DECLARE_VAR_IS_HEAP_ALLOC
+    if ((bench_additional == NULL) || (bench_tag == NULL)) {
+        printf("malloc failed\n");
+        goto exit;
+    }
+#endif
 
     XMEMSET(bench_tag, 0, AES_AUTH_TAG_SZ);
     XMEMSET(bench_additional, 0, AES_AUTH_ADD_SZ);
 
     if ((ret = wc_AesCcmSetKey(&enc, bench_key, 16)) != 0) {
         printf("wc_AesCcmSetKey failed, ret = %d\n", ret);
-        return;
+        goto exit;
     }
 
     bench_stats_start(&count, &start);
@@ -3144,6 +3156,7 @@ void bench_aesccm(void)
     } while (bench_stats_sym_check(start));
     bench_stats_sym_finish("AES-CCM-Dec", 0, count, bench_size, start, ret);
 
+  exit:
 
     FREE_VAR(bench_additional, HEAP_HINT);
     FREE_VAR(bench_tag, HEAP_HINT);
@@ -4946,7 +4959,21 @@ static void bench_rsa_helper(int doAsync, RsaKey rsaKey[BENCH_MAX_PENDING],
     #if !defined(WOLFSSL_RSA_VERIFY_INLINE) && \
                     !defined(WOLFSSL_RSA_PUBLIC_ONLY)
         DECLARE_ARRAY_DYNAMIC_EXE(out, byte, BENCH_MAX_PENDING, rsaKeySz, HEAP_HINT);
+        if (out[0] == NULL) {
+            ret = MEMORY_E;
+            goto exit;
+        }
     #endif
+    if (enc[0] == NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+#ifdef DECLARE_VAR_IS_HEAP_ALLOC
+    if (message == NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+#endif
 
     if (!rsa_sign_verify) {
 #ifndef WOLFSSL_RSA_VERIFY_ONLY
@@ -5292,6 +5319,12 @@ void bench_dh(int doAsync)
     DECLARE_ARRAY(agree, byte, BENCH_MAX_PENDING, BENCH_DH_KEY_SIZE, HEAP_HINT);
     DECLARE_ARRAY(priv, byte, BENCH_MAX_PENDING, BENCH_DH_PRIV_SIZE, HEAP_HINT);
     DECLARE_VAR(priv2, byte, BENCH_DH_PRIV_SIZE, HEAP_HINT);
+#ifdef DECLARE_VAR_IS_HEAP_ALLOC
+    if ((pub[0] == NULL) || (pub2 == NULL) || (agree[0] == NULL) || (priv[0] == NULL) || (priv2 == NULL)) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+#endif
 
     (void)tmp;
 
@@ -5645,9 +5678,19 @@ void bench_ntruKeyGen(void)
 
 #ifdef HAVE_ECC
 
-/* Default to testing P-256 */
+/* Detect ECC key size to use */
 #ifndef BENCH_ECC_SIZE
-    #define BENCH_ECC_SIZE  32
+    #ifndef NO_ECC256
+        #define BENCH_ECC_SIZE 32
+    #elif defined(HAVE_ECC384)
+        #define BENCH_ECC_SIZE 48
+    #elif defined(HAVE_ECC224)
+        #define BENCH_ECC_SIZE 28
+    #elif defined(HAVE_ECC521)
+        #define BENCH_ECC_SIZE 66
+    #else
+        #error No ECC keygen size defined for benchmark
+    #endif
 #endif
 static int bench_ecc_size = BENCH_ECC_SIZE;
 
@@ -5721,6 +5764,21 @@ void bench_ecc(int doAsync)
     DECLARE_ARRAY(digest, byte, BENCH_MAX_PENDING, BENCH_ECC_SIZE, HEAP_HINT);
 #endif
 
+#ifdef DECLARE_VAR_IS_HEAP_ALLOC
+#ifdef HAVE_ECC_DHE
+    if (shared[0] == NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+#endif
+#if !defined(NO_ASN) && defined(HAVE_ECC_SIGN)
+    if ((sig[0] == NULL) || (digest[0] == NULL)) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+#endif
+#endif
+
     /* clear for done cleanup */
     XMEMSET(&genKey, 0, sizeof(genKey));
 #ifdef HAVE_ECC_DHE
@@ -5753,6 +5811,13 @@ void bench_ecc(int doAsync)
     }
 
 #ifdef HAVE_ECC_DHE
+#if defined(ECC_TIMING_RESISTANT) && (!defined(HAVE_FIPS) || \
+    (!defined(HAVE_FIPS_VERSION) || (HAVE_FIPS_VERSION != 2))) && \
+    !defined(HAVE_SELFTEST)
+    for (i = 0; i < BENCH_MAX_PENDING; i++) {
+        (void)wc_ecc_set_rng(&genKey[i], &gRng);
+    }
+#endif
 
     /* ECC Shared Secret */
     bench_stats_start(&count, &start);
@@ -5863,6 +5928,13 @@ exit:
     FREE_ARRAY(sig, BENCH_MAX_PENDING, HEAP_HINT);
     FREE_ARRAY(digest, BENCH_MAX_PENDING, HEAP_HINT);
 #endif
+
+    (void)pending;
+    (void)x;
+    (void)count;
+    (void)times;
+    (void)desc;
+    (void)start;
 }
 
 
@@ -5891,6 +5963,19 @@ void bench_eccEncrypt(void)
         wc_ecc_free(&userA);
         return;
     }
+
+#if defined(ECC_TIMING_RESISTANT) && (!defined(HAVE_FIPS) || \
+    (!defined(HAVE_FIPS_VERSION) || (HAVE_FIPS_VERSION != 2))) && \
+    !defined(HAVE_SELFTEST)
+    ret = wc_ecc_set_rng(&userA, &gRng);
+    if (ret != 0) {
+        goto exit;
+    }
+    ret = wc_ecc_set_rng(&userB, &gRng);
+    if (ret != 0) {
+        goto exit;
+    }
+#endif
 
     ret = wc_ecc_make_key(&gRng, keySize, &userA);
 #ifdef WOLFSSL_ASYNC_CRYPT

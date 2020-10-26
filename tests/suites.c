@@ -118,7 +118,7 @@ static int IsOldTlsVersion(const char* line)
 
 
 /* if the cipher suite on line is valid store in suite and return 1, else 0 */
-static int IsValidCipherSuite(const char* line, char* suite)
+static int IsValidCipherSuite(const char* line, char *suite, size_t suite_spc)
 {
     int  found = 0;
     int  valid = 0;
@@ -126,6 +126,9 @@ static int IsValidCipherSuite(const char* line, char* suite)
     const char* find = "-l ";
     const char* begin = strstr(line, find);
     const char* end;
+
+    if (suite_spc < MAX_SUITE_SZ+1)
+        return 0;
 
     suite[0] = '\0';
 
@@ -152,10 +155,10 @@ static int IsValidCipherSuite(const char* line, char* suite)
 
     /* if QSH not enabled then do not use QSH suite */
     #ifdef HAVE_QSH
-        if (XSTRNCMP(suite, "QSH", 3) == 0) {
+        if (suite[0] && (XSTRNCMP(suite, "QSH", 3) == 0)) {
             if (wolfSSL_CTX_set_cipher_list(cipherSuiteCtx, suite + 4)
                                                                  != WOLFSSL_SUCCESS)
-            return 0;
+                return 0;
         }
     #endif
 
@@ -249,6 +252,40 @@ static int IsValidCA(const char* line)
     return ret;
 }
 
+#ifdef WOLFSSL_NO_CLIENT_AUTH
+static int IsClientAuth(const char* line, int* reqClientCert)
+{
+    const char* begin;
+
+    begin = XSTRSTR(line, "-H verifyFail");
+    if (begin != NULL) {
+        return 1;
+    }
+
+    begin = XSTRSTR(line, "-d");
+    if (begin != NULL) {
+        *reqClientCert = 0;
+    }
+    else {
+        *reqClientCert = 1;
+    }
+
+    return 0;
+}
+
+static int IsNoClientCert(const char* line)
+{
+    const char* begin;
+
+    begin = XSTRSTR(line, "-x");
+    if (begin != NULL) {
+        return 1;
+    }
+
+    return 0;
+}
+#endif
+
 static int execute_test_case(int svr_argc, char** svr_argv,
                              int cli_argc, char** cli_argv,
                              int addNoVerify, int addNonBlocking,
@@ -278,6 +315,9 @@ static int execute_test_case(int svr_argc, char** svr_argv,
     char        portNumber[8];
 #endif
     int         cliTestShouldFail = 0, svrTestShouldFail = 0;
+#ifdef WOLFSSL_NO_CLIENT_AUTH
+    int         reqClientCert;
+#endif
 
     /* Is Valid Cipher and Version Checks */
     /* build command list for the Is checks below */
@@ -292,7 +332,7 @@ static int execute_test_case(int svr_argc, char** svr_argv,
         strcat(commandLine, svr_argv[i]);
         strcat(commandLine, flagSep);
     }
-    if (IsValidCipherSuite(commandLine, cipherSuite) == 0) {
+    if (IsValidCipherSuite(commandLine, cipherSuite, sizeof cipherSuite) == 0) {
         #ifdef DEBUG_SUITE_TESTS
             printf("cipher suite %s not supported in build\n", cipherSuite);
         #endif
@@ -327,6 +367,15 @@ static int execute_test_case(int svr_argc, char** svr_argv,
             printf("protocol version on line %s is too old\n", commandLine);
         #endif
         return VERSION_TOO_OLD;
+    }
+#endif
+#ifdef WOLFSSL_NO_CLIENT_AUTH
+    if (IsClientAuth(commandLine, &reqClientCert)) {
+        #ifdef DEBUG_SUITE_TESTS
+            printf("client auth on line %s not supported in build\n",
+                   commandLine);
+        #endif
+        return NOT_BUILT_IN;
     }
 #endif
 
@@ -454,6 +503,15 @@ static int execute_test_case(int svr_argc, char** svr_argv,
         #endif
         return NOT_BUILT_IN;
     }
+#ifdef WOLFSSL_NO_CLIENT_AUTH
+    if (reqClientCert && IsNoClientCert(commandLine)) {
+        #ifdef DEBUG_SUITE_TESTS
+            printf("client auth on line %s not supported in build\n",
+                   commandLine);
+        #endif
+        return NOT_BUILT_IN;
+    }
+#endif
     printf("trying client command line[%d]: %s\n", tests, commandLine);
     tests++;
 
@@ -817,6 +875,18 @@ int SuiteTest(int argc, char** argv)
     /* add ED448 certificate cipher suite tests */
     strcpy(argv0[1], "tests/test-ed448.conf");
     printf("starting ED448 extra cipher suite tests\n");
+    test_harness(&args);
+    if (args.return_code != 0) {
+        printf("error from script %d\n", args.return_code);
+        args.return_code = EXIT_FAILURE;
+        goto exit;
+    }
+#endif
+#if (defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)) && \
+                                                         defined(WOLFSSL_SHA512)
+    /* add P-521 certificate cipher suite tests */
+    strcpy(argv0[1], "tests/test-p521.conf");
+    printf("starting P-521 extra cipher suite tests\n");
     test_harness(&args);
     if (args.return_code != 0) {
         printf("error from script %d\n", args.return_code);
