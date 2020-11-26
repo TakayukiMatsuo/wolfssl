@@ -22,8 +22,15 @@
 /*!
     \file wolfssl/wolfcrypt/aes.h
 */
+/*
 
+DESCRIPTION
+This library provides the interfaces to the Advanced Encryption Standard (AES)
+for encrypting and decrypting data. AES is the standard known for a symmetric
+block cipher mechanism that uses n-bit binary string parameter key with 128-bits,
+192-bits, and 256-bits of key sizes.
 
+*/
 #ifndef WOLF_CRYPT_AES_H
 #define WOLF_CRYPT_AES_H
 
@@ -55,14 +62,9 @@
     #include <wolfssl/wolfcrypt/port/st/stm32.h>
 #endif
 
-#ifdef WOLFSSL_AESNI
-
-#include <wmmintrin.h>
-#include <emmintrin.h>
-#include <smmintrin.h>
-
-#endif /* WOLFSSL_AESNI */
-
+#ifdef WOLFSSL_IMXRT_DCP
+    #include "fsl_dcp.h"
+#endif
 
 #ifdef WOLFSSL_XILINX_CRYPT
 #include "xsecure_aes.h"
@@ -169,6 +171,12 @@ struct Aes {
 #ifdef GCM_TABLE
     /* key-based fast multiplication table. */
     ALIGN16 byte M0[256][AES_BLOCK_SIZE];
+#elif defined(GCM_TABLE_4BIT)
+    #if defined(BIG_ENDIAN_ORDER) || defined(WC_16BIT_CPU)
+        ALIGN16 byte M0[16][AES_BLOCK_SIZE];
+    #else
+        ALIGN16 byte M0[32][AES_BLOCK_SIZE];
+    #endif
 #endif /* GCM_TABLE */
 #ifdef HAVE_CAVIUM_OCTEON_SYNC
     word32 y0;
@@ -226,6 +234,9 @@ struct Aes {
 #if defined(WOLFSSL_RENESAS_TSIP_TLS) && \
     defined(WOLFSSL_RENESAS_TSIP_TLS_AES_CRYPT)
     TSIP_AES_CTX ctx;
+#endif
+#if defined(WOLFSSL_IMXRT_DCP)
+    dcp_handle_t handle;
 #endif
     void*  heap; /* memory hint to use */
 };

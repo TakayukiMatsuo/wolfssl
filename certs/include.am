@@ -45,6 +45,7 @@ EXTRA_DIST += \
 	     certs/test-degenerate.p7b \
 	     certs/test-ber-exp02-05-2022.p7b \
 	     certs/test-servercert.p12 \
+	     certs/test-servercert-rc2.p12 \
 	     certs/ecc-rsa-server.p12 \
 	     certs/dsaparams.pem \
 	     certs/ecc-privOnlyKey.pem \
@@ -106,9 +107,11 @@ include certs/crl/include.am
 include certs/ecc/include.am
 include certs/ed25519/include.am
 include certs/ed448/include.am
+include certs/p521/include.am
 include certs/external/include.am
 include certs/ocsp/include.am
 include certs/statickeys/include.am
 include certs/test/include.am
 include certs/test-pathlen/include.am
 include certs/intermediate/include.am
+
