@@ -42,7 +42,7 @@
 
 void wolfSSL_TLS_client_init();
 void wolfSSL_TLS_client();
-void wolfSSL_TLS_server_init();
+void wolfSSL_TLS_server_init(byte);
 void wolfSSL_TLS_server();
 
 #endif /* WOLFSSL_DEMO_H_ */
