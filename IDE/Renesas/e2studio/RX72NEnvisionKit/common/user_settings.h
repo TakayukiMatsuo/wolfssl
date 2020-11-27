@@ -19,6 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#ifndef USER_SETTINGS_H
+#define USER_SETTINGS_H
 /*-- Renesas MCU type ---------------------------------------------------------
  *
  *
@@ -89,9 +91,6 @@
  *----------------------------------------------------------------------------*/
   #define SIZEOF_LONG_LONG 8
 
-#if !defined(min)
-  #define min(data1, data2)                _builtin_min(data1, data2)
-#endif
 
  /* 
   * -- "NO_ASN_TIME" macro is to avoid certificate expiration validation --
@@ -179,3 +178,5 @@
     #define HAVE_HKDF
     #define WC_RSA_PSS
 #endif
+
+#endif /* USER_SETTINGS_H */
