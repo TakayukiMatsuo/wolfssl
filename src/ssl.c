@@ -43036,6 +43036,25 @@ size_t wolfSSL_strlcat(char *dst, const char *src, size_t dstSize)
 #endif /* OPENSSL_EXTRA */
 
 
+#if defined(OPENSSL_EXTRA)
+#ifndef NO_WOLFSSL_STUB
+void wolfSSL_CRYPTO_THREADID_current(WOLFSSL_CRYPTO_THREADID* id)
+{
+    WOLFSSL_ENTER("wolfSSL_CRYPTO_THREADID_current");
+    WOLFSSL_STUB("CRYPTO_THREADID_current");
+    (void)id;
+    return;
+}
+unsigned long wolfSSL_CRYPTO_THREADID_hash(const WOLFSSL_CRYPTO_THREADID* id)
+{
+    WOLFSSL_ENTER("wolfSSL_CRYPTO_THREADID_hash");
+    WOLFSSL_STUB("CRYPTO_THREADID_hash");
+    (void)id;
+    return 0U;
+}
+#endif
+#endif /* OPENSSL_EXTRA*/
+
 #if defined(HAVE_LIGHTY) || defined(HAVE_STUNNEL) \
     || defined(WOLFSSL_MYSQL_COMPATIBLE) || defined(OPENSSL_EXTRA)
 

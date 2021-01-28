@@ -52,7 +52,7 @@ WOLFSSL_API void *wolfSSL_OPENSSL_malloc(size_t a);
 WOLFSSL_API int wolfSSL_OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings);
 #endif
 
-#define CRYPTO_THREADID void
+
 
 #define SSLeay_version wolfSSLeay_version
 #define SSLeay wolfSSLeay
@@ -90,7 +90,6 @@ typedef void (CRYPTO_free_func)(void*parent, void*ptr, CRYPTO_EX_DATA *ad, int i
         long argl, void* argp);
 #define CRYPTO_THREADID_set_callback wolfSSL_THREADID_set_callback
 #define CRYPTO_THREADID_set_numeric wolfSSL_THREADID_set_numeric
-
 #define CRYPTO_r_lock wc_LockMutex_ex
 #define CRYPTO_unlock wc_LockMutex_ex
 

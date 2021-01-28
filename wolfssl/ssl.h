@@ -686,6 +686,11 @@ enum Tls13Secret {
 };
 #endif
 
+#if defined(OPENSSL_EXTRA)
+typedef struct WOLFSSL_CRYPTO_THREADID {
+    int dummy;
+}WOLFSSL_CRYPTO_THREADID;
+#endif
 
 typedef WOLFSSL_METHOD* (*wolfSSL_method_func)(void* heap);
 
@@ -1346,7 +1351,12 @@ WOLFSSL_API void wolfSSL_set_dynlock_lock_callback(void (*f)(int,
 WOLFSSL_API void wolfSSL_set_dynlock_destroy_callback(void (*f)
                                      (WOLFSSL_dynlock_value*, const char*, int));
 WOLFSSL_API int  wolfSSL_num_locks(void);
-
+#if defined(OPENSSL_EXTRA)
+WOLFSSL_API void wolfSSL_CRYPTO_THREADID_current(
+                                       WOLFSSL_CRYPTO_THREADID* id);
+WOLFSSL_API unsigned long wolfSSL_CRYPTO_THREADID_hash(
+                                        const WOLFSSL_CRYPTO_THREADID* id);
+#endif
 WOLFSSL_API WOLFSSL_X509* wolfSSL_X509_STORE_CTX_get_current_cert(
                                                         WOLFSSL_X509_STORE_CTX*);
 WOLFSSL_API int   wolfSSL_X509_STORE_CTX_get_error(WOLFSSL_X509_STORE_CTX*);

@@ -124,6 +124,12 @@ typedef WOLFSSL_X509_STORE     X509_STORE;
 typedef WOLFSSL_X509_STORE_CTX X509_STORE_CTX;
 typedef WOLFSSL_X509_VERIFY_PARAM X509_VERIFY_PARAM;
 
+#if defined(OPENSSL_EXTRA)
+typedef WOLFSSL_CRYPTO_THREADID         CRYPTO_THREADID;
+#define CRYPTO_THREADID_current         wolfSSL_CRYPTO_THREADID_current
+#define CRYPTO_THREADID_hash            wolfSSL_CRYPTO_THREADID_hash
+#endif
+
 #define EVP_CIPHER_INFO        EncryptedInfo
 
 #define STACK_OF(x) WOLFSSL_STACK
