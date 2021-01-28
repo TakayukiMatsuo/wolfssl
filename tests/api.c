@@ -2363,11 +2363,11 @@ static void test_ED448(void)
  | EVP
  *----------------------------------------------------------------------------*/
 
-#if defined(OPENSSL_EXTRA) && \
-( defined(WOLFSSL_BASE64_ENCODE) || defined(WOLFSSL_BASE64_DECODE))
 /* Test functions for base64 encode/decode */
 static void test_wolfSSL_EVP_ENCODE_CTX_new(void)
 {
+#if defined(OPENSSL_EXTRA) && \
+( defined(WOLFSSL_BASE64_ENCODE) || defined(WOLFSSL_BASE64_DECODE))
     printf(testingFmt, "wolfSSL_EVP_ENCODE_CTX_new()");
 
     WOLFSSL_EVP_ENCODE_CTX* ctx = NULL;
@@ -2379,20 +2379,24 @@ static void test_wolfSSL_EVP_ENCODE_CTX_new(void)
     wolfSSL_EVP_ENCODE_CTX_free(ctx);
 
     printf(resultFmt, passed);
+#endif /* OPENSSL_EXTRA && (WOLFSSL_BASE64_ENCODE || WOLFSSL_BASE64_DECODE)*/
 }
 static void test_wolfSSL_EVP_ENCODE_CTX_free(void)
 {
+#if defined(OPENSSL_EXTRA) && \
+( defined(WOLFSSL_BASE64_ENCODE) || defined(WOLFSSL_BASE64_DECODE))
     printf(testingFmt, "wolfSSL_EVP_ENCODE_CTX_free()");
     WOLFSSL_EVP_ENCODE_CTX* ctx = NULL;
 
     AssertNotNull( ctx = wolfSSL_EVP_ENCODE_CTX_new());
     wolfSSL_EVP_ENCODE_CTX_free(ctx);
     printf(resultFmt, passed);
+#endif /*OPENSSL_EXTRA && (WOLFSSL_BASE64_ENCODE || WOLFSSL_BASE64_DECODE)*/    
 }
-#endif /* OPENSSL_EXTRA && (WOLFSSL_BASE64_ENCODE || WOLFSSL_BASE64_DECODE)*/
-#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_ENCODE)
+
 static void test_wolfSSL_EVP_EncodeInit(void)
 {
+#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_ENCODE)
     printf(testingFmt, "wolfSSL_EVP_EncodeInit()");
     WOLFSSL_EVP_ENCODE_CTX* ctx = NULL;
 
@@ -2413,9 +2417,11 @@ static void test_wolfSSL_EVP_EncodeInit(void)
 
     wolfSSL_EVP_ENCODE_CTX_free(ctx);
     printf(resultFmt, passed);
+#endif /* OPENSSL_EXTRA && WOLFSSL_BASE64_ENCODE*/    
 }
 static void test_wolfSSL_EVP_EncodeUpdate(void)
 {
+#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_ENCODE)
     printf(testingFmt, "wolfSSL_EVP_EncodeUpdate()");
     int outl;
     int total;
@@ -2580,20 +2586,24 @@ static void test_wolfSSL_EVP_EncodeUpdate(void)
 
     wolfSSL_EVP_ENCODE_CTX_free(ctx);
     printf(resultFmt, passed);
+#endif /* OPENSSL_EXTRA && WOLFSSL_BASE64_ENCODE*/    
 }
 static void test_wolfSSL_EVP_EncodeFinal(void)
 {
+#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_ENCODE)    
     printf(testingFmt, "wolfSSL_EVP_EncodeFinal()");
 
     /* tests for wolfSSL_EVP_EncodeFinal are included in
      * test_wolfSSL_EVP_EncodeUpdate
      */
     printf(resultFmt, passed);
+#endif /* OPENSSL_EXTRA && WOLFSSL_BASE64_ENCODE*/    
 }
-#endif /* OPENSSL_EXTRA && WOLFSSL_BASE64_ENCODE*/
-#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_DECODE)
+
+
 static void test_wolfSSL_EVP_DecodeInit(void)
 {
+#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_DECODE)    
     printf(testingFmt, "wolfSSL_EVP_DecodeInit()");
 
     WOLFSSL_EVP_ENCODE_CTX* ctx = NULL;
@@ -2615,9 +2625,11 @@ static void test_wolfSSL_EVP_DecodeInit(void)
 
     wolfSSL_EVP_ENCODE_CTX_free(ctx);
     printf(resultFmt, passed);
+#endif /* OPENSSL && WOLFSSL_BASE_DECODE */    
 }
 static void test_wolfSSL_EVP_DecodeUpdate(void)
 {
+#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_DECODE)    
     printf(testingFmt, "wolfSSL_EVP_DecodeUpdate()");
 
     int outl;
@@ -2820,17 +2832,19 @@ static void test_wolfSSL_EVP_DecodeUpdate(void)
     wolfSSL_EVP_ENCODE_CTX_free(ctx);
 
     printf(resultFmt, passed);
-
+#endif /* OPENSSL && WOLFSSL_BASE_DECODE */
 }
 static void test_wolfSSL_EVP_DecodeFinal(void)
 {
+#if defined(OPENSSL_EXTRA) && defined(WOLFSSL_BASE64_DECODE)    
     printf(testingFmt, "wolfSSL_EVP_DecodeFinal()");
     /* tests for wolfSSL_EVP_DecodeFinal are included in
      * test_wolfSSL_EVP_DecodeUpdate
      */
     printf(resultFmt, passed);
+#endif /* OPENSSL && WOLFSSL_BASE_DECODE */    
 }
-#endif /* OPENSSL && WOLFSSL_BASE_DECODE */
+
 
 /* Test function for wolfSSL_EVP_get_cipherbynid.
  */
